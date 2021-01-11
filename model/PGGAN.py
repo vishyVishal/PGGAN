@@ -151,8 +151,8 @@ class Generator(nn.Module):
             level = self.R
         assert level in range(2, self.R + 1)
         assert mode in {'stabilize', 'transition'}
-        from_, to_ = 0, level - 1
         if mode == 'stabilize':
+            from_, to_ = 0, level - 1
             for i in range(from_, to_):
                 x = self.progress_growing_layers[i](x)
             x = self.to_rgb_layers[to_ - 1](x)
