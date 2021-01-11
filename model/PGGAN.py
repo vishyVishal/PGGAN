@@ -80,7 +80,7 @@ class Generator(nn.Module):
                  use_pixelnorm=True,
                  use_leakyrelu=True,
                  negative_slope=0.2,
-                 use_batchnorm=False,
+                 use_batchnorm=True,
                  tanh_at_end=True):
         super(Generator, self).__init__()
         self.num_channels = num_channels
@@ -261,5 +261,5 @@ class Discriminator(nn.Module):
         in2 = self.progress_growing_layers[from_ - 1](in2)
         out = (1 - alpha) * in1 + alpha * in2
         for i in range(from_, to_):
-            out = self.progress_growing_layers[i](x)
+            out = self.progress_growing_layers[i](out)
         return out
