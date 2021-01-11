@@ -80,7 +80,7 @@ class Generator(nn.Module):
                  use_pixelnorm=True,
                  use_leakyrelu=True,
                  negative_slope=0.2,
-                 use_batchnorm=True,
+                 use_batchnorm=False,
                  tanh_at_end=True):
         super(Generator, self).__init__()
         self.num_channels = num_channels
