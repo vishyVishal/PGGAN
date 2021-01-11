@@ -25,17 +25,16 @@ def visualize(imgs):
 
 
 def load_model(level):
-    assert level in range(2, 9)
     G = Generator()
-    print(G.load_state_dict(torch.load('state_dict/G_4.pkl')))
+    print(G.load_state_dict(torch.load(f'state_dict/G_{2 ** level}.pkl')))
     G.cuda().eval()
     return G
 
 
 def test(G, level, batch_size=16):
-    assert level in range(2, 9)
+    assert level in range(2, G.R + 1)
     batch_size = batch_size
-    x = torch.randn(size=(batch_size, 512)).cuda()
+    x = torch.randn(size=(batch_size, G.latent_dim)).cuda()
     fake_imgs = G(x, level=level).cpu().detach()
     real_imgs = dataset(batch_size, level=level)
     visualize(real_imgs)
