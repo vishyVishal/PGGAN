@@ -20,7 +20,7 @@ class PGGAN(object):
         self.use_cuda = use_cuda and torch.cuda.is_available()
         self.R = generator.R
 
-        self.batchsizes = {level: self.get_batchsize(level) for level in range(2, self.R + 1)}
+        self.batchsizes = {2: 128, 3: 128, 4: 128, 5: 64, 6: 16, 7: 8, 8: 4}
 
         if self.use_cuda:
             self.G.cuda()
@@ -38,7 +38,7 @@ class PGGAN(object):
         self.level = 2
         self.mode = 'stabilize'
         self.batch_size = self.batchsizes.get(self.level)
-        # 记录当前Discriminator “看” 过的真实图片数
+        # 记录当前阶段Discriminator “看” 过的真实图片数
         self.passed_real_images_num = 0
         # 'transition'模式下的fade in系数
         self.fade_in_alpha = 0
@@ -84,16 +84,6 @@ class PGGAN(object):
         gradient_penalty = ((grad.norm(2, dim=1) - 1) ** 2).mean()
         return gradient_penalty
 
-    def get_batchsize(self, level):
-        """
-        根据当前的分辨率动态调整batch_size
-        """
-        if level < 7:
-            batch_size = 32 / 2 ** (max(0, level - 4))
-        else:
-            batch_size = 8 / 2 ** (min(2, level - 7))
-        return int(batch_size)
-
     def train_G(self):
         self.G_optim.zero_grad()
         noise = torch.randn(size=(self.batch_size, self.G.latent_dim))
@@ -115,7 +105,8 @@ class PGGAN(object):
         real_score = self.D(real_images, level=self.level, mode=self.mode, alpha=self.fade_in_alpha).mean()
         fake_score = self.D(fake_images, level=self.level, mode=self.mode, alpha=self.fade_in_alpha).mean()
         gradient_penalty = self.compute_gradient_penalty(real_images, fake_images)
-        loss = fake_score - real_score + 10 * gradient_penalty
+        epsilon_penalty = 1e-3 * torch.sum(real_score ** 2)  # 防止正例得分离0过远
+        loss = fake_score - real_score + 10 * gradient_penalty + epsilon_penalty
         loss.backward()
         self.D_optim.step()
         print(f'\rLevel: {self.level} | Mode: {self.mode} | D Loss: {loss.item()} | Image Passed: {self.passed_real_images_num}',
