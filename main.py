@@ -1,6 +1,8 @@
 from torch import optim, autograd
+from collections import defaultdict
 from torchvision import transforms as T
 import sys
+import matplotlib.pyplot as plt
 from model.PGGAN import *
 from data.dataset import CelebA
 from utils import EMA
@@ -8,7 +10,8 @@ from utils import EMA
 
 class PGGAN(object):
     def __init__(self, generator: Generator, discriminator: Discriminator, dataset: CelebA, n_critic=1,
-                 noise_generator=NoiseGenerator(torch.randn), switch_mode_number=800000, use_ema=True, ema_mu=0.999, use_cuda=True):
+                 noise_generator=NoiseGenerator(torch.randn), switch_mode_number=800000, recode_dist_every=100,
+                 use_ema=True, ema_mu=0.999, use_cuda=True):
         self.G = generator
         self.D = discriminator
         assert generator.R == discriminator.R
@@ -17,6 +20,8 @@ class PGGAN(object):
         self.noise_generator = noise_generator
         # Discriminator “看” 过的真实图片达到switch_mode_number时,进行模式的切换
         self.switch_mode_number = switch_mode_number
+        self.recode_dist_every = recode_dist_every
+        self.current_step = 0
         self.use_ema = use_ema
         self.use_cuda = use_cuda and torch.cuda.is_available()
         self.R = generator.R
@@ -47,6 +52,8 @@ class PGGAN(object):
         self.alpha_step = 1 / (self.switch_mode_number / self.batch_size)
 
         self.is_finished = 0  # 训练结束标识
+
+        self.log_dict = defaultdict(list)  # 记录训练过程
 
     def update_state(self):
         self.passed_real_images_num = 0
@@ -111,8 +118,13 @@ class PGGAN(object):
         loss = w_dist + 10 * gradient_penalty + epsilon_penalty
         loss.backward()
         self.D_optim.step()
-        print(f'\rLevel: {self.level} | Mode: {self.mode} | W-Distance: {w_dist.abs().item()} | Image Passed: {self.passed_real_images_num}',
-              end='', file=sys.stdout, flush=True)
+        self.current_step += 1
+        if self.current_step == self.recode_dist_every:
+            self.current_step = 0
+            w_dist = w_dist.abs().item()
+            print(f'\rLevel: {self.level} | Mode: {self.mode} | W-Distance: {w_dist} | Image Passed: {self.passed_real_images_num}',
+                  end='', file=sys.stdout, flush=True)
+            self.log_dict[f'{self.level}_{self.mode}'].append(w_dist)
 
     def train(self):
         while 1:
@@ -122,6 +134,10 @@ class PGGAN(object):
                     self.fade_in_alpha += self.alpha_step
                 self.passed_real_images_num += self.batch_size
                 if self.passed_real_images_num >= self.switch_mode_number:
+                    plt.plot(self.log_dict.get(f'{self.level}_{self.mode}'))
+                    plt.title(f'Level_{self.level}_{self.mode}_W_distance')
+                    plt.savefig(f'Level_{self.level}_{self.mode}.jpg')
+                    plt.show()
                     if self.mode == 'stabilize':
                         torch.save(self.G.state_dict(), f'state_dict/G_{2 ** self.level}.pkl')
                     self.update_state()
