@@ -224,7 +224,7 @@ class Discriminator(nn.Module):
             return x
         assert alpha is not None
         from_, to_ = self.R - level + 1, self.R - 1
-        in1 = self.down_sampler(x)
+        in1 = F.avg_pool2d(x, kernel_size=2, stride=2)
         in1 = self.from_rgb_layers[from_](in1)
         in2 = self.from_rgb_layers[from_ - 1](x)
         in2 = self.progress_growing_layers[from_ - 1](in2)
