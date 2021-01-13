@@ -111,7 +111,7 @@ class PGGAN(object):
         loss = w_dist + 10 * gradient_penalty + epsilon_penalty
         loss.backward()
         self.D_optim.step()
-        print(f'\rLevel: {self.level} | Mode: {self.mode} | W-Distance: {w_dist.item()} | Image Passed: {self.passed_real_images_num}',
+        print(f'\rLevel: {self.level} | Mode: {self.mode} | W-Distance: {w_dist.abs().item()} | Image Passed: {self.passed_real_images_num}',
               end='', file=sys.stdout, flush=True)
 
     def train(self):
