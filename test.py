@@ -54,6 +54,15 @@ def save_samples(G, level, batch_size):
         img.save(f'samples/{level}/{time.time()}.jpg')
 
 
+def interpolate_samples(G, level, batch_size):
+    x = torch.randn(G.latent_dim).cuda()
+    y = torch.randn(G.latent_dim).cuda()
+    step = (y - x) / (batch_size - 1)
+    latent = torch.stack([i * step + x for i in range(batch_size)])
+    images = G(latent, level=level).cpu().detach()
+    visualize(images)
+
+
 dataset = CelebA(transform=T.Compose([T.ToTensor(), T.Normalize([0.5], [0.5])]))
 
 
