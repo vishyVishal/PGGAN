@@ -31,7 +31,7 @@ class DConvBlock(nn.Module):
         super(DConvBlock, self).__init__()
         layers = []
         if use_gdrop:
-            layers.append(GeneralizedDropout(mode='prop', strength=0.))
+            layers.append(GeneralizedDropout(mode='prop', strength=0.2))
         layers.extend([EqualizedConv2d(in_channels, out_channels, kernel_size, padding=padding), nonlinearity])
         if use_pixelnorm:
             layers.append(PixelNormLayer())
@@ -156,6 +156,7 @@ class Discriminator(nn.Module):
                  minibatch_stat_concat=True,
                  use_weightscale=True,
                  use_layernorm=False,
+                 use_gdrop=True,
                  sigmoid_at_end=False):
         super(Discriminator, self).__init__()
         self.num_channels = num_channels
@@ -166,6 +167,7 @@ class Discriminator(nn.Module):
         self.minibatch_stat_concat = minibatch_stat_concat
         self.use_weightscale = use_weightscale
         self.use_layernorm = use_layernorm
+        self.use_gdrop = use_gdrop
         self.sigmoid_at_end = sigmoid_at_end
 
         nonlinear = nn.LeakyReLU(negative_slope)
@@ -178,8 +180,10 @@ class Discriminator(nn.Module):
             in_channels, out_channels = self.get_feature_map_number(r), self.get_feature_map_number(r - 1)
             self.from_rgb_layers.append(FromOrToRGBLayer(num_channels, in_channels, nonlinearity=nonlinear, use_pixelnorm=False))
             self.progress_growing_layers.append(nn.Sequential(
-                DConvBlock(in_channels, in_channels, kernel_size=3, padding=1, nonlinearity=nonlinear),
-                DConvBlock(in_channels, out_channels, kernel_size=3, padding=1, nonlinearity=nonlinear),
+                DConvBlock(in_channels, in_channels, kernel_size=3, padding=1,
+                           nonlinearity=nonlinear, use_gdrop=use_gdrop),
+                DConvBlock(in_channels, out_channels, kernel_size=3, padding=1,
+                           nonlinearity=nonlinear, use_gdrop=use_gdrop),
                 nn.AvgPool2d(kernel_size=2, stride=2, count_include_pad=False)
             ))
         last_layers = []
@@ -189,8 +193,10 @@ class Discriminator(nn.Module):
             last_layers.append(MinibatchStatConcatLayer())
             in_channels += 1
         last_layers.extend([
-            DConvBlock(in_channels, out_channels, kernel_size=3, padding=1, nonlinearity=nonlinear),
-            DConvBlock(out_channels, self.get_feature_map_number(0), kernel_size=4, padding=0, nonlinearity=nonlinear),
+            DConvBlock(in_channels, out_channels, kernel_size=3, padding=1,
+                       nonlinearity=nonlinear, use_gdrop=use_gdrop),
+            DConvBlock(out_channels, self.get_feature_map_number(0), kernel_size=4, padding=0,
+                       nonlinearity=nonlinear, use_gdrop=use_gdrop),
             Flatten(),
             nn.Linear(self.get_feature_map_number(0), 128),
             nn.LeakyReLU(negative_slope),
