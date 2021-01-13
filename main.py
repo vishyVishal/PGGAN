@@ -41,7 +41,7 @@ class PGGAN(object):
         self.D_optim = optim.Adam(self.D.parameters(), lr=1e-3, betas=(0, 0.99), eps=1e-8)
         self.G_optim = optim.Adam(self.G.parameters(), lr=1e-3, betas=(0, 0.99), eps=1e-8)
 
-        self.level = 7
+        self.level = 2
         self.mode = 'stabilize'
         self.batch_size = self.batchsizes.get(self.level)
         # 记录当前阶段Discriminator “看” 过的真实图片数
