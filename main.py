@@ -8,12 +8,13 @@ from utils import EMA
 
 class PGGAN(object):
     def __init__(self, generator: Generator, discriminator: Discriminator, dataset: CelebA, n_critic=1,
-                 switch_mode_number=800000, use_ema=True, ema_mu=0.999, use_cuda=True):
+                 noise_generator=NoiseGenerator(torch.randn), switch_mode_number=800000, use_ema=True, ema_mu=0.999, use_cuda=True):
         self.G = generator
         self.D = discriminator
         assert generator.R == discriminator.R
         self.dataset = dataset
         self.n_critic = n_critic
+        self.noise_generator = noise_generator
         # Discriminator “看” 过的真实图片达到switch_mode_number时,进行模式的切换
         self.switch_mode_number = switch_mode_number
         self.use_ema = use_ema
@@ -86,7 +87,7 @@ class PGGAN(object):
 
     def train_G(self):
         self.G_optim.zero_grad()
-        noise = torch.randn(size=(self.batch_size, self.G.latent_dim))
+        noise = self.noise_generator(shape=(self.batch_size, self.G.latent_dim))
         if self.use_cuda:
             noise = noise.cuda()
         generated_images = self.G(noise, level=self.level, mode=self.mode, alpha=self.fade_in_alpha)
@@ -97,7 +98,7 @@ class PGGAN(object):
 
     def train_D(self):
         self.D_optim.zero_grad()
-        noise = torch.randn(size=(self.batch_size, self.G.latent_dim))
+        noise = self.noise_generator(shape=(self.batch_size, self.G.latent_dim))
         real_images = self.dataset(self.batch_size, self.level)
         if self.use_cuda:
             noise, real_images = noise.cuda(), real_images.cuda()
@@ -106,10 +107,11 @@ class PGGAN(object):
         fake_score = self.D(fake_images, level=self.level, mode=self.mode, alpha=self.fade_in_alpha).mean()
         gradient_penalty = self.compute_gradient_penalty(real_images, fake_images)
         epsilon_penalty = 1e-3 * torch.sum(real_score ** 2)  # 防止正例得分离0过远
-        loss = fake_score - real_score + 10 * gradient_penalty + epsilon_penalty
+        w_dist = fake_score - real_score  # 模型评价指标
+        loss = w_dist + 10 * gradient_penalty + epsilon_penalty
         loss.backward()
         self.D_optim.step()
-        print(f'\rLevel: {self.level} | Mode: {self.mode} | D Loss: {loss.item()} | Image Passed: {self.passed_real_images_num}',
+        print(f'\rLevel: {self.level} | Mode: {self.mode} | W-Distance: {w_dist.item()} | Image Passed: {self.passed_real_images_num}',
               end='', file=sys.stdout, flush=True)
 
     def train(self):
