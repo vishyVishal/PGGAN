@@ -127,7 +127,7 @@ class PGGAN(object):
     def plot_stat_curve(self):
         plt.plot(self.log_list)
         plt.title(f'Level_{self.level}_{self.mode}_W_distance')
-        plt.savefig(f'Level_{self.level}_{self.mode}.jpg')
+        plt.savefig(f'plots/Level_{self.level}_{self.mode}.jpg')
         plt.close()
         self.log_list.clear()
 
