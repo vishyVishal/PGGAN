@@ -53,7 +53,7 @@ class PGGAN(object):
 
         self.is_finished = 0  # 训练结束标识
 
-        self.log_dict = defaultdict(list)  # 记录训练过程
+        self.log_list = []  # 记录训练过程
 
     def update_state(self):
         self.passed_real_images_num = 0
@@ -124,15 +124,15 @@ class PGGAN(object):
             w_dist = w_dist.abs().item()
             print(f'\rLevel: {self.level} | Mode: {self.mode} | W-Distance: {w_dist} | Image Passed: {self.passed_real_images_num}',
                   end='', file=sys.stdout, flush=True)
-            self.log_dict[f'{self.level}_{self.mode}'].append(w_dist)
+            self.log_list.append(w_dist)
 
     def plot_stat_curve(self):
-        plt.plot(self.log_dict.get(f'{self.level}_{self.mode}'))
+        plt.plot(self.log_list)
         plt.title(f'Level_{self.level}_{self.mode}_W_distance')
         plt.savefig(f'Level_{self.level}_{self.mode}.jpg')
         plt.show()
         plt.close()
-        del self.log_dict[f'{self.level}_{self.mode}']
+        self.log_list.clear()
 
     def train(self):
         while 1:
