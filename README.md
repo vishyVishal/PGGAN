@@ -1,2 +1,2 @@
 # PGGAN
-Generate human faces randomly!
+Try to generate high quality human faces randomly!
