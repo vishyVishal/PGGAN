@@ -1,8 +1,10 @@
 from torch import optim, autograd
-from collections import defaultdict
 from torchvision import transforms as T
 import sys
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
 from model.PGGAN import *
 from data.dataset import CelebA
 from utils import EMA
@@ -126,7 +128,6 @@ class PGGAN(object):
         plt.plot(self.log_list)
         plt.title(f'Level_{self.level}_{self.mode}_W_distance')
         plt.savefig(f'Level_{self.level}_{self.mode}.jpg')
-        plt.show()
         plt.close()
         self.log_list.clear()
 
