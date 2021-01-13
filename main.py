@@ -10,7 +10,7 @@ from utils import EMA
 
 class PGGAN(object):
     def __init__(self, generator: Generator, discriminator: Discriminator, dataset: CelebA, n_critic=1,
-                 noise_generator=NoiseGenerator(torch.randn), switch_mode_number=800000, recode_dist_every=100,
+                 noise_generator=NoiseGenerator(torch.randn), switch_mode_number=800000, record_dist_every=100,
                  use_ema=True, ema_mu=0.999, use_cuda=True):
         self.G = generator
         self.D = discriminator
@@ -20,7 +20,7 @@ class PGGAN(object):
         self.noise_generator = noise_generator
         # Discriminator “看” 过的真实图片达到switch_mode_number时,进行模式的切换
         self.switch_mode_number = switch_mode_number
-        self.recode_dist_every = recode_dist_every
+        self.record_dist_every = record_dist_every
         self.current_step = 0
         self.use_ema = use_ema
         self.use_cuda = use_cuda and torch.cuda.is_available()
@@ -119,7 +119,7 @@ class PGGAN(object):
         loss.backward()
         self.D_optim.step()
         self.current_step += 1
-        if not self.current_step % self.recode_dist_every:
+        if not self.current_step % self.record_dist_every:
             w_dist = w_dist.abs().item()
             print(f'\rLevel: {self.level} | Mode: {self.mode} | W-Distance: {w_dist} | Image Passed: {self.passed_real_images_num}',
                   end='', file=sys.stdout, flush=True)
