@@ -156,7 +156,7 @@ class Discriminator(nn.Module):
                  minibatch_stat_concat=True,
                  use_weightscale=True,
                  use_layernorm=False,
-                 use_gdrop=True,
+                 use_gdrop=False,
                  sigmoid_at_end=False):
         super(Discriminator, self).__init__()
         self.num_channels = num_channels
