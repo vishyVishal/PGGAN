@@ -119,8 +119,7 @@ class PGGAN(object):
         loss.backward()
         self.D_optim.step()
         self.current_step += 1
-        if self.current_step == self.recode_dist_every:
-            self.current_step = 0
+        if not self.current_step % self.recode_dist_every:
             w_dist = w_dist.abs().item()
             print(f'\rLevel: {self.level} | Mode: {self.mode} | W-Distance: {w_dist} | Image Passed: {self.passed_real_images_num}',
                   end='', file=sys.stdout, flush=True)
