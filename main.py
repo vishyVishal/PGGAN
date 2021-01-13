@@ -119,6 +119,7 @@ class PGGAN(object):
         loss = w_dist + 10 * gradient_penalty + epsilon_penalty
         loss.backward()
         self.D_optim.step()
+        self.passed_real_images_num += self.batch_size
         if not self.current_step % self.record_dist_every:
             w_dist = w_dist.abs().item()
             print(f'\rLevel: {self.level} | Mode: {self.mode} | W-Distance: {w_dist} | Image Passed: {self.passed_real_images_num}',
@@ -140,7 +141,6 @@ class PGGAN(object):
                 self.train_D()
                 if self.mode == 'transition':
                     self.fade_in_alpha += self.alpha_step
-                self.passed_real_images_num += self.batch_size
                 if self.passed_real_images_num >= self.switch_mode_number:
                     self.plot_stat_curve()
                     if self.mode == 'stabilize':
