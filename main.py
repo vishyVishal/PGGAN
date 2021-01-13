@@ -26,7 +26,7 @@ class PGGAN(object):
         self.use_cuda = use_cuda and torch.cuda.is_available()
         self.R = generator.R
 
-        self.batchsizes = {2: 128, 3: 128, 4: 128, 5: 64, 6: 16, 7: 8, 8: 4}
+        self.batchsizes = {2: 128, 3: 128, 4: 128, 5: 64, 6: 64, 7: 32, 8: 8}
 
         if self.use_cuda:
             self.G.cuda()
@@ -41,7 +41,7 @@ class PGGAN(object):
         self.D_optim = optim.Adam(self.D.parameters(), lr=1e-3, betas=(0, 0.99), eps=1e-8)
         self.G_optim = optim.Adam(self.G.parameters(), lr=1e-3, betas=(0, 0.99), eps=1e-8)
 
-        self.level = 2
+        self.level = 7
         self.mode = 'stabilize'
         self.batch_size = self.batchsizes.get(self.level)
         # 记录当前阶段Discriminator “看” 过的真实图片数
@@ -57,6 +57,7 @@ class PGGAN(object):
 
     def update_state(self):
         self.passed_real_images_num = 0
+        torch.cuda.empty_cache()
         if self.mode == 'stabilize':
             if self.level == self.R:
                 # level达到最大值且状态为stabilize时,终止训练
@@ -118,12 +119,12 @@ class PGGAN(object):
         loss = w_dist + 10 * gradient_penalty + epsilon_penalty
         loss.backward()
         self.D_optim.step()
-        self.current_step += 1
         if not self.current_step % self.record_dist_every:
             w_dist = w_dist.abs().item()
             print(f'\rLevel: {self.level} | Mode: {self.mode} | W-Distance: {w_dist} | Image Passed: {self.passed_real_images_num}',
                   end='', file=sys.stdout, flush=True)
             self.log_list.append(w_dist)
+        self.current_step += 1
 
     def plot_stat_curve(self):
         plt.plot(self.log_list)
