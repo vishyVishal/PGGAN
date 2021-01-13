@@ -131,6 +131,8 @@ class PGGAN(object):
         plt.title(f'Level_{self.level}_{self.mode}_W_distance')
         plt.savefig(f'Level_{self.level}_{self.mode}.jpg')
         plt.show()
+        plt.close()
+        del self.log_dict[f'{self.level}_{self.mode}']
 
     def train(self):
         while 1:
