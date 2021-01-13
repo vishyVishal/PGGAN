@@ -188,14 +188,14 @@ class Discriminator(nn.Module):
         if minibatch_stat_concat:
             last_layers.append(MinibatchStatConcatLayer())
             in_channels += 1
-        last_layers.append(nn.Sequential(
+        last_layers.extend([
             DConvBlock(in_channels, out_channels, kernel_size=3, padding=1, nonlinearity=nonlinear),
             DConvBlock(out_channels, self.get_feature_map_number(0), kernel_size=4, padding=0, nonlinearity=nonlinear),
             Flatten(),
             nn.Linear(self.get_feature_map_number(0), 128),
             nn.LeakyReLU(negative_slope),
             nn.Linear(128, 1)
-        ))
+        ])
         if sigmoid_at_end:
             last_layers.append(out_active)
         self.progress_growing_layers.append(nn.Sequential(*last_layers))
