@@ -66,11 +66,11 @@ class Generator(nn.Module):
                  feature_map_base=4096,
                  feature_map_decay=1.0,
                  max_feature_map=256,
-                 normalize_latent=True,  # whether or not use pixel normalization to latent vector
+                 normalize_latent=True,  # whether or not to use pixel normalization to latent vector
                  use_pixelnorm=True,
                  use_leakyrelu=True,
                  negative_slope=0.2,
-                 tanh_at_end=False  # whether or not use tanh after each to_rgb layer
+                 tanh_at_end=False  # whether or not to use tanh after each to_rgb layer
                  ):
         super(Generator, self).__init__()
         self.num_channels = num_channels
