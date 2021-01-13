@@ -118,3 +118,11 @@ class Flatten(nn.Module):
 
     def forward(self, x):
         return x.reshape(x.shape[0], -1)
+
+
+class NoiseGenerator(object):
+    def __init__(self, fcn):
+        self.fcn = fcn
+
+    def __call__(self, shape):
+        return self.fcn(shape)
