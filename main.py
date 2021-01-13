@@ -126,6 +126,12 @@ class PGGAN(object):
                   end='', file=sys.stdout, flush=True)
             self.log_dict[f'{self.level}_{self.mode}'].append(w_dist)
 
+    def plot_stat_curve(self):
+        plt.plot(self.log_dict.get(f'{self.level}_{self.mode}'))
+        plt.title(f'Level_{self.level}_{self.mode}_W_distance')
+        plt.savefig(f'Level_{self.level}_{self.mode}.jpg')
+        plt.show()
+
     def train(self):
         while 1:
             for _ in range(self.n_critic):
@@ -134,10 +140,7 @@ class PGGAN(object):
                     self.fade_in_alpha += self.alpha_step
                 self.passed_real_images_num += self.batch_size
                 if self.passed_real_images_num >= self.switch_mode_number:
-                    plt.plot(self.log_dict.get(f'{self.level}_{self.mode}'))
-                    plt.title(f'Level_{self.level}_{self.mode}_W_distance')
-                    plt.savefig(f'Level_{self.level}_{self.mode}.jpg')
-                    plt.show()
+                    self.plot_stat_curve()
                     if self.mode == 'stabilize':
                         torch.save(self.G.state_dict(), f'state_dict/G_{2 ** self.level}.pkl')
                     self.update_state()
