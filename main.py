@@ -162,7 +162,8 @@ class PGGAN(object):
 
 
 if __name__ == '__main__':
-    g = Generator(latent_dim=config.latent_dim,
+    g = Generator(resolution=config.resolution,
+                  latent_dim=config.latent_dim,
                   max_feature_map=config.max_feature_map,
                   normalize_latent=config.normalize_latent,
                   use_pixelnorm=config.use_pixelnorm,
@@ -170,14 +171,17 @@ if __name__ == '__main__':
                   use_leakyrelu=config.use_leaky,
                   negative_slope=config.negative_slope,
                   tanh_at_end=config.tanh_at_end)
-    d = Discriminator(max_feature_map=config.max_feature_map,
+    d = Discriminator(resolution=config.resolution,
+                      max_feature_map=config.max_feature_map,
                       use_leakyrelu=config.use_leaky,
                       negative_slope=config.negative_slope,
                       minibatch_stat_concat=config.minibatch_stat_concat,
                       use_weightscale=config.use_weightscale,
                       use_gdrop=config.use_gdrop,
                       sigmoid_at_end=config.sigmoid_at_end)
-    dataset = CelebA(T.Compose([T.ToTensor(), T.Normalize([0.5], [0.5])]))
+    dataset = CelebA(data_root=config.data_root,
+                     transform=T.Compose([T.ToTensor(), T.Normalize([0.5], [0.5])]),
+                     max_resolution=config.resolution)
     pggan = PGGAN(g, d, dataset, n_critic=config.n_critic, switch_mode_number=config.switch_mode_number,
                   lr=config.lr, lr_decay=config.lr_decay, beta_0=config.beta0, beta_1=config.beta1,
                   use_ema=config.use_ema, ema_mu=config.ema_mu, use_cuda=config.use_cuda)
