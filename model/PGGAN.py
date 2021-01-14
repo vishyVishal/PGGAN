@@ -143,8 +143,8 @@ class Generator(nn.Module):
         level: 表示正在进行的分辨率的2底数对数,例如,当前为64 pixel时,level为6
         mode: 取值为'stabilize'或'transition',后者在当前level进行fade in
         """
-        assert level in range(2, self.R + 1)
-        assert mode in {'stabilize', 'transition'}
+        # assert level in range(2, self.R + 1)
+        # assert mode in {'stabilize', 'transition'}
         if mode == 'stabilize':
             from_, to_ = 0, level - 1
             for i in range(from_, to_):
@@ -235,8 +235,8 @@ class Discriminator(nn.Module):
         level: 表示正在进行的分辨率的2底数对数,例如,当前为64 pixel时,level为6
         mode: 取值为'stabilize'或'transition',后者在当前level进行fade in
         """
-        assert level in range(2, self.R + 1)
-        assert mode in {'stabilize', 'transition'}
+        # assert level in range(2, self.R + 1)
+        # assert mode in {'stabilize', 'transition'}
         if mode == 'stabilize':
             from_, to_ = self.R - level, self.R - 1
             x = self.from_rgb_layers[from_](x)
