@@ -27,7 +27,7 @@ class PGGAN(object):
         self.R = generator.R
 
         # self.batchsizes = {2: 128, 3: 128, 4: 128, 5: 64, 6: 64, 7: 32, 8: 8}
-        self.batchsizes = {2: 16, 3: 16, 4: 16, 5: 16, 6: 16, 7: 16, 8: 8}
+        self.batch_sizes = {2: 16, 3: 16, 4: 16, 5: 16, 6: 16, 7: 16, 8: 8}
 
         if self.use_cuda:
             self.G.cuda()
@@ -46,13 +46,13 @@ class PGGAN(object):
 
         self.level = 2
         self.mode = 'stabilize'
-        self.batch_size = self.batchsizes.get(self.level)
+        self.current_batch_size = self.batch_sizes.get(self.level)
         # 记录当前阶段Discriminator “看” 过的真实图片数
         self.passed_real_images_num = 0
         # 'transition'模式下的fade in系数
         self.fade_in_alpha = 0
         # 'transition'模式下,每次迭代alpha增加的步长
-        self.alpha_step = 1 / (self.switch_mode_number / self.batch_size)
+        self.alpha_step = 1 / (self.switch_mode_number / self.current_batch_size)
 
         self.is_finished = 0  # 训练结束标识
 
@@ -77,9 +77,9 @@ class PGGAN(object):
                 return
             self.mode = 'transition'
             self.level += 1
-            self.batch_size = self.batchsizes.get(self.level)
+            self.current_batch_size = self.batch_sizes.get(self.level)
             self.fade_in_alpha = 0
-            self.alpha_step = 1 / (self.switch_mode_number / self.batch_size)
+            self.alpha_step = 1 / (self.switch_mode_number / self.current_batch_size)
             self.update_lr()
         else:
             self.mode = 'stabilize'
@@ -108,7 +108,7 @@ class PGGAN(object):
 
     def train_G(self):
         self.G_optim.zero_grad()
-        noise = torch.randn(size=(self.batch_size, self.G.latent_dim))
+        noise = torch.randn(size=(self.current_batch_size, self.G.latent_dim))
         if self.use_cuda:
             noise = noise.cuda()
         generated_images = self.G(noise, level=self.level, mode=self.mode, alpha=self.fade_in_alpha)
@@ -119,8 +119,8 @@ class PGGAN(object):
 
     def train_D(self):
         self.D_optim.zero_grad()
-        noise = torch.randn(size=(self.batch_size, self.G.latent_dim))
-        real_images = self.dataset(self.batch_size, self.level)
+        noise = torch.randn(size=(self.current_batch_size, self.G.latent_dim))
+        real_images = self.dataset(self.current_batch_size, self.level)
         if self.use_cuda:
             noise, real_images = noise.cuda(), real_images.cuda()
         fake_images = self.G(noise, level=self.level, mode=self.mode, alpha=self.fade_in_alpha)
@@ -132,7 +132,7 @@ class PGGAN(object):
         loss = w_dist + 10 * gradient_penalty + epsilon_penalty
         loss.backward()
         self.D_optim.step()
-        self.passed_real_images_num += self.batch_size
+        self.passed_real_images_num += self.current_batch_size
         w_dist = w_dist.abs().item()
         print(f'\rLevel: {self.level} | Mode: {self.mode} | W-Distance: {w_dist} | Image Passed: {self.passed_real_images_num}',
               end='', file=sys.stdout, flush=True)
