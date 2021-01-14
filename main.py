@@ -37,8 +37,8 @@ class PGGAN(object):
                 if param.requires_grad:
                     self.ema.register(name, param.data)
 
-        self.D_optim = optim.Adam(self.D.parameters(), lr=1e-3, betas=(0, 0.99), eps=1e-8)
-        self.G_optim = optim.Adam(self.G.parameters(), lr=1e-3, betas=(0, 0.99), eps=1e-8)
+        self.D_optim = optim.Adam(self.D.parameters(), lr=2e-4, betas=(0, 0.99), eps=1e-8)
+        self.G_optim = optim.Adam(self.G.parameters(), lr=2e-4, betas=(0, 0.99), eps=1e-8)
 
         self.level = 2
         self.mode = 'stabilize'
@@ -126,8 +126,8 @@ class PGGAN(object):
 
     def plot_stat_curve(self):
         plt.plot(self.log_list)
-        plt.title(f'Level_{self.level}_{self.mode}_W_distance')
-        plt.savefig(f'plots/Level_{self.level}_{self.mode}.jpg')
+        plt.title(f'Level_{self.level}_W_distance')
+        plt.savefig(f'plots/Level_{self.level}.jpg')
         plt.close()
         self.log_list.clear()
 
@@ -138,8 +138,8 @@ class PGGAN(object):
                 if self.mode == 'transition':
                     self.fade_in_alpha += self.alpha_step
                 if self.passed_real_images_num >= self.switch_mode_number:
-                    self.plot_stat_curve()
                     if self.mode == 'stabilize':
+                        self.plot_stat_curve()
                         torch.save(self.G.state_dict(), f'state_dict/G_{2 ** self.level}.pkl')
                     self.update_state()
             self.train_G()
