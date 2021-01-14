@@ -121,6 +121,7 @@ class Generator(nn.Module):
                                                    nonlinearity=out_active, use_weightscale=use_weightscale,
                                                    use_pixelnorm=False))
         self.R = int(math.log2(resolution))
+        assert 2 ** self.R == resolution
         for r in range(2, self.R):
             in_channels, out_channels = self.get_feature_map_number(r - 1), self.get_feature_map_number(r)
             self.progress_growing_layers.append(nn.Sequential(
@@ -191,6 +192,7 @@ class Discriminator(nn.Module):
         nonlinear = nn.LeakyReLU(negative_slope) if use_leakyrelu else nn.ReLU()
         out_active = nn.Sigmoid() if self.sigmoid_at_end else None
         self.R = int(math.log2(resolution))
+        assert 2 ** self.R == resolution
 
         self.from_rgb_layers = nn.ModuleList()
         self.progress_growing_layers = nn.ModuleList()
