@@ -5,21 +5,12 @@ from torch.nn import functional as F
 import numpy as np
 
 
-class EqualizedConv2d(nn.Module):
+class EqualizedConv2d(nn.Conv2d):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, bias=True):
-        super(EqualizedConv2d, self).__init__()
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.kernel_size = kernel_size
-        self.stride = stride
-        if isinstance(padding, int):
-            padding = padding, padding
-        self.padding = padding
-        self.bias = bias
-        self.weight = nn.Parameter(
-            torch.FloatTensor(out_channels, in_channels, kernel_size, kernel_size).normal_(0.0, 1.0))
-        if self.bias:
-            self.bias = nn.Parameter(torch.FloatTensor(out_channels).fill_(0))
+        super(EqualizedConv2d, self).__init__(in_channels, out_channels, kernel_size, stride, padding, bias=bias)
+        self.weight.data.normal_(0.0, 1.0)
+        if self.bias is not None:
+            self.bias.data.fill_(0)
         fan_in = kernel_size * kernel_size * in_channels
         self.scale = math.sqrt(2. / fan_in)
 
@@ -29,14 +20,18 @@ class EqualizedConv2d(nn.Module):
                         bias=self.bias,
                         stride=self.stride, padding=self.padding)
 
-    def extra_repr(self) -> str:
-        s = ('{in_channels}, {out_channels}, kernel_size={kernel_size}'
-             ', stride={stride}')
-        if self.padding != (0,) * len(self.padding):
-            s += ', padding={padding}'
-        if self.bias is None:
-            s += ', bias=False'
-        return s.format(**self.__dict__)
+
+class EqualizedLinear(nn.Linear):
+    def __init__(self, in_features, out_features, bias=True):
+        super(EqualizedLinear, self).__init__(in_features, out_features, bias)
+        self.weight.data.normal_(0.0, 1.0)
+        if self.bias is not None:
+            self.bias.data.fill_(0)
+        fan_in = in_features
+        self.scale = math.sqrt(2. / fan_in)
+
+    def forward(self, x):
+        return F.linear(x, weight=self.weight.mul(self.scale), bias=self.bias)
 
 
 class GeneralizedDropout(nn.Module):
