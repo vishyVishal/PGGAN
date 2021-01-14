@@ -113,7 +113,7 @@ class PGGAN(object):
         real_score = self.D(real_images, level=self.level, mode=self.mode, alpha=self.fade_in_alpha).mean()
         fake_score = self.D(fake_images, level=self.level, mode=self.mode, alpha=self.fade_in_alpha).mean()
         gradient_penalty = self.compute_gradient_penalty(real_images, fake_images)
-        epsilon_penalty = 1e-3 * torch.sum(real_score ** 2)  # 防止正例得分离0过远
+        epsilon_penalty = 1e-3 * torch.mean(real_score ** 2)  # 防止正例得分离0过远
         w_dist = fake_score - real_score  # 模型评价指标
         loss = w_dist + 10 * gradient_penalty + epsilon_penalty
         loss.backward()
