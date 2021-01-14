@@ -61,7 +61,7 @@ class PGGAN(object):
     def update_lr(self):
         if self.lr_decay == 0:
             return
-        self.lr /= self.lr_decay
+        self.lr *= self.lr_decay
         for param_group in self.D_optim.param_groups:
             param_group['lr'] = self.lr
         for param_group in self.G_optim.param_groups:
