@@ -137,8 +137,8 @@ class Generator(nn.Module):
         from_, to_ = 0, level - 2
         for i in range(from_, to_):
             x = self.progress_growing_layers[i](x)
-        out1 = self.to_rgb_layers[to_ - 1](x)
-        out1 = F.interpolate(out1, scale_factor=2, mode='nearest')
+        out1 = F.interpolate(x, scale_factor=2, mode='nearest')
+        out1 = self.to_rgb_layers[to_ - 1](out1)
         x = self.progress_growing_layers[to_](x)
         out2 = self.to_rgb_layers[to_](x)
         out = (1 - alpha) * out1 + alpha * out2
@@ -197,11 +197,20 @@ class Discriminator(nn.Module):
                        nonlinearity=nonlinear, use_gdrop=use_gdrop),
             DConvBlock(out_channels, self.get_feature_map_number(0), kernel_size=4, padding=0,
                        nonlinearity=nonlinear, use_gdrop=use_gdrop),
-            Flatten(),
-            nn.Linear(self.get_feature_map_number(0), 128),
-            nn.LeakyReLU(negative_slope),
-            nn.Linear(128, 1)
+            Flatten()
         ])
+        if not use_weightscale:
+            last_layers.extend([
+                nn.Linear(self.get_feature_map_number(0), 128),
+                nn.LeakyReLU(negative_slope),
+                nn.Linear(128, 1)
+            ])
+        else:
+            last_layers.extend([
+                EqualizedLinear(self.get_feature_map_number(0), 128),
+                nn.LeakyReLU(negative_slope),
+                EqualizedLinear(128, 1)
+            ])
         if sigmoid_at_end:
             last_layers.append(out_active)
         self.progress_growing_layers.append(nn.Sequential(*last_layers))
