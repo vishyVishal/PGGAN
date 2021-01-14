@@ -2,6 +2,7 @@ import argparse
 
 parser = argparse.ArgumentParser('Args for PGGAN')
 parser.add_argument('--data_root', type=str, default='data/celeba_faces')
+parser.add_argument('--resolution', type=int, default=256)      # resolution for image to generate.
 parser.add_argument('--use_ema', type=bool, default=True)       # whether to use EMA to weights of generator.
 parser.add_argument('--ema_mu', type=float, default=0.999)      # smoothing factor for smoothed generator.
 parser.add_argument('--latent_dim', type=int, default=512)      # input dimension of noise.
