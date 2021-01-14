@@ -12,13 +12,12 @@ from utils import EMA
 
 class PGGAN(object):
     def __init__(self, generator: Generator, discriminator: Discriminator, dataset: CelebA, n_critic=1,
-                 noise_generator=NoiseGenerator(torch.randn), switch_mode_number=800000, use_ema=True, ema_mu=0.999, use_cuda=True):
+                 switch_mode_number=800000, use_ema=True, ema_mu=0.999, use_cuda=True):
         self.G = generator
         self.D = discriminator
         assert generator.R == discriminator.R
         self.dataset = dataset
         self.n_critic = n_critic
-        self.noise_generator = noise_generator
         # Discriminator “看” 过的真实图片达到switch_mode_number时,进行模式的切换
         self.switch_mode_number = switch_mode_number
         self.use_ema = use_ema
@@ -95,7 +94,7 @@ class PGGAN(object):
 
     def train_G(self):
         self.G_optim.zero_grad()
-        noise = self.noise_generator(shape=(self.batch_size, self.G.latent_dim))
+        noise = torch.randn(size=(self.batch_size, self.G.latent_dim))
         if self.use_cuda:
             noise = noise.cuda()
         generated_images = self.G(noise, level=self.level, mode=self.mode, alpha=self.fade_in_alpha)
@@ -106,7 +105,7 @@ class PGGAN(object):
 
     def train_D(self):
         self.D_optim.zero_grad()
-        noise = self.noise_generator(shape=(self.batch_size, self.G.latent_dim))
+        noise = torch.randn(size=(self.batch_size, self.G.latent_dim))
         real_images = self.dataset(self.batch_size, self.level)
         if self.use_cuda:
             noise, real_images = noise.cuda(), real_images.cuda()
