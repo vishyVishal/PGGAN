@@ -196,7 +196,8 @@ class Discriminator(nn.Module):
         self.progress_growing_layers = nn.ModuleList()
         for r in range(self.R - 1, 1, -1):
             in_channels, out_channels = self.get_feature_map_number(r), self.get_feature_map_number(r - 1)
-            self.from_rgb_layers.append(FromOrToRGBLayer(num_channels, in_channels, nonlinearity=nonlinear, use_pixelnorm=False))
+            self.from_rgb_layers.append(FromOrToRGBLayer(num_channels, in_channels,
+                                                         nonlinearity=nonlinear, use_pixelnorm=False))
             self.progress_growing_layers.append(nn.Sequential(
                 DConvBlock(in_channels, in_channels, kernel_size=3, padding=1,
                            nonlinearity=nonlinear, use_gdrop=use_gdrop),
@@ -206,7 +207,8 @@ class Discriminator(nn.Module):
             ))
         last_layers = []
         in_channels, out_channels = self.get_feature_map_number(1), self.get_feature_map_number(1)
-        self.from_rgb_layers.append(FromOrToRGBLayer(num_channels, in_channels, nonlinearity=nonlinear, use_pixelnorm=False))
+        self.from_rgb_layers.append(FromOrToRGBLayer(num_channels, in_channels,
+                                                     nonlinearity=nonlinear, use_pixelnorm=False))
         if minibatch_stat_concat:
             last_layers.append(MinibatchStatConcatLayer())
             in_channels += 1
