@@ -8,11 +8,13 @@ import matplotlib.pyplot as plt
 from model.PGGAN import *
 from data.dataset import CelebA
 from utils import EMA
+from config import config
 
 
 class PGGAN(object):
     def __init__(self, generator: Generator, discriminator: Discriminator, dataset: CelebA, n_critic=1,
-                 switch_mode_number=800000, use_ema=True, ema_mu=0.999, use_cuda=True):
+                 lr=0.001, lr_decay=0, beta_0=0, beta_1=0.99, switch_mode_number=800000,
+                 use_ema=True, ema_mu=0.999, use_cuda=True):
         self.G = generator
         self.D = discriminator
         assert generator.R == discriminator.R
@@ -37,8 +39,10 @@ class PGGAN(object):
                 if param.requires_grad:
                     self.ema.register(name, param.data)
 
-        self.D_optim = optim.Adam(self.D.parameters(), lr=1e-3, betas=(0, 0.99), eps=1e-8)
-        self.G_optim = optim.Adam(self.G.parameters(), lr=1e-3, betas=(0, 0.99), eps=1e-8)
+        self.lr = lr
+        self.lr_decay = lr_decay
+        self.D_optim = optim.Adam(self.D.parameters(), lr=lr, betas=(beta_0, beta_1), eps=1e-8)
+        self.G_optim = optim.Adam(self.G.parameters(), lr=lr, betas=(beta_0, beta_1), eps=1e-8)
 
         self.level = 2
         self.mode = 'stabilize'
@@ -54,6 +58,15 @@ class PGGAN(object):
 
         self.log_list = []  # 记录训练过程
 
+    def update_lr(self):
+        if self.lr_decay == 0:
+            return
+        self.lr /= self.lr_decay
+        for param_group in self.D_optim.param_groups:
+            param_group['lr'] = self.lr
+        for param_group in self.G_optim.param_groups:
+            param_group['lr'] = self.lr
+
     def update_state(self):
         self.passed_real_images_num = 0
         torch.cuda.empty_cache()
@@ -67,6 +80,7 @@ class PGGAN(object):
             self.batch_size = self.batchsizes.get(self.level)
             self.fade_in_alpha = 0
             self.alpha_step = 1 / (self.switch_mode_number / self.batch_size)
+            self.update_lr()
         else:
             self.mode = 'stabilize'
 
@@ -148,8 +162,23 @@ class PGGAN(object):
 
 
 if __name__ == '__main__':
-    g = Generator()
-    d = Discriminator()
+    g = Generator(latent_dim=config.latent_dim,
+                  max_feature_map=config.max_feature_map,
+                  normalize_latent=config.normalize_latent,
+                  use_pixelnorm=config.use_pixelnorm,
+                  use_weightscale=config.use_weightscale,
+                  use_leakyrelu=config.use_leaky,
+                  negative_slope=config.negative_slope,
+                  tanh_at_end=config.tanh_at_end)
+    d = Discriminator(max_feature_map=config.max_feature_map,
+                      use_leakyrelu=config.use_leaky,
+                      negative_slope=config.negative_slope,
+                      minibatch_stat_concat=config.minibatch_stat_concat,
+                      use_weightscale=config.use_weightscale,
+                      use_gdrop=config.use_gdrop,
+                      sigmoid_at_end=config.sigmoid_at_end)
     dataset = CelebA(T.Compose([T.ToTensor(), T.Normalize([0.5], [0.5])]))
-    pggan = PGGAN(g, d, dataset)
+    pggan = PGGAN(g, d, dataset, n_critic=config.n_critic, switch_mode_number=config.switch_mode_number,
+                  lr=config.lr, lr_decay=config.lr_decay, beta_0=config.beta0, beta_1=config.beta1,
+                  use_ema=config.use_ema, ema_mu=config.ema_mu, use_cuda=config.use_cuda)
     pggan.train()
