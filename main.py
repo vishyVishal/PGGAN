@@ -25,7 +25,8 @@ class PGGAN(object):
         self.use_cuda = use_cuda and torch.cuda.is_available()
         self.R = generator.R
 
-        self.batchsizes = {2: 128, 3: 128, 4: 128, 5: 64, 6: 64, 7: 32, 8: 8}
+        # self.batchsizes = {2: 128, 3: 128, 4: 128, 5: 64, 6: 64, 7: 32, 8: 8}
+        self.batchsizes = {2: 16, 3: 16, 4: 16, 5: 16, 6: 16, 7: 16, 8: 8}
 
         if self.use_cuda:
             self.G.cuda()
@@ -37,8 +38,8 @@ class PGGAN(object):
                 if param.requires_grad:
                     self.ema.register(name, param.data)
 
-        self.D_optim = optim.Adam(self.D.parameters(), lr=2e-4, betas=(0, 0.99), eps=1e-8)
-        self.G_optim = optim.Adam(self.G.parameters(), lr=2e-4, betas=(0, 0.99), eps=1e-8)
+        self.D_optim = optim.Adam(self.D.parameters(), lr=1e-3, betas=(0, 0.99), eps=1e-8)
+        self.G_optim = optim.Adam(self.G.parameters(), lr=1e-3, betas=(0, 0.99), eps=1e-8)
 
         self.level = 2
         self.mode = 'stabilize'
