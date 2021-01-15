@@ -23,7 +23,7 @@ parser.add_argument('--normalize_latent', type=bool, default=True)  # whether to
 
 
 parser.add_argument('--lr', type=float, default=0.001)              # learning rate.
-parser.add_argument('--lr_decay', type=float, default=0.87)         # learning rate decay at every resolution transition, no decay if set to 0.
+parser.add_argument('--lr_decay', type=float, default=0.9)         # learning rate decay at every resolution transition, no decay if set to 0.
 parser.add_argument('--beta0', type=float, default=0.0)             # beta0 for adam.
 parser.add_argument('--beta1', type=float, default=0.99)            # beta1 for adam.
 
