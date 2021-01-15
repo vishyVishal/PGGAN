@@ -136,7 +136,8 @@ class PGGAN(object):
         self.D_optim.step()
         self.passed_real_images_num += self.current_batch_size
         w_dist = w_dist.abs().item()
-        print(f'\rLevel: {self.level} | Mode: {self.mode} | W-Distance: {w_dist} | Image Passed: {self.passed_real_images_num}',
+        print(f'\rLevel: {self.level} | Mode: {self.mode} | W-Distance: {w_dist} | '
+              f'Image Passed: {self.passed_real_images_num}/{self.switch_mode_number}',
               end='', file=sys.stdout, flush=True)
         self.log_list.append(w_dist)
 
