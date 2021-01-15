@@ -8,7 +8,7 @@ parser.add_argument('--ema_mu', type=float, default=0.999)      # smoothing fact
 parser.add_argument('--latent_dim', type=int, default=512)      # input dimension of noise.
 parser.add_argument('--use_cuda', type=bool, default=True)      # whether to use cuda device.
 parser.add_argument('--switch_mode_number', type=int, default=800000)  # number of passed images to switch mode.
-parser.add_argument('--switch_number_increase', type=int, default=0)  # switch_mode_number increase at every resolution transition.
+parser.add_argument('--switch_number_increase', type=int, default=0)  # higher resolution need more real images to train.
 parser.add_argument('--n_critic', type=int, default=1)           # n(D)/n(G)
 parser.add_argument('--max_feature_map', type=int, default=256)   # max number of feature maps of Convolution layers.
 parser.add_argument('--use_weightscale', type=bool, default=True)  # whether to use equalized-learning rate.
