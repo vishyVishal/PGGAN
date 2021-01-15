@@ -13,7 +13,7 @@ from config import config
 
 class PGGAN(object):
     def __init__(self, generator: Generator, discriminator: Discriminator, dataset: CelebA, n_critic=1,
-                 lr=0.001, lr_decay=0, beta_0=0, beta_1=0.99, switch_mode_number=800000,
+                 lr=0.001, lr_decay=0, beta_0=0, beta_1=0.99, switch_mode_number=800000, switch_number_increase=0,
                  use_ema=True, ema_mu=0.999, use_cuda=True):
         self.G = generator
         self.D = discriminator
@@ -22,6 +22,7 @@ class PGGAN(object):
         self.n_critic = n_critic
         # Discriminator “看” 过的真实图片达到switch_mode_number时,进行模式的切换
         self.switch_mode_number = switch_mode_number
+        self.switch_number_increase = switch_number_increase
         self.use_ema = use_ema
         self.use_cuda = use_cuda and torch.cuda.is_available()
         self.R = generator.R
@@ -80,6 +81,7 @@ class PGGAN(object):
             self.current_batch_size = self.batch_sizes.get(self.level)
             self.fade_in_alpha = 0
             self.alpha_step = 1 / (self.switch_mode_number / self.current_batch_size)
+            self.switch_mode_number += self.switch_number_increase
             self.update_lr()
         else:
             self.mode = 'stabilize'
@@ -183,6 +185,7 @@ if __name__ == '__main__':
                      transform=T.Compose([T.ToTensor(), T.Normalize([0.5], [0.5])]),
                      max_resolution=config.resolution)
     pggan = PGGAN(g, d, dataset, n_critic=config.n_critic, switch_mode_number=config.switch_mode_number,
-                  lr=config.lr, lr_decay=config.lr_decay, beta_0=config.beta0, beta_1=config.beta1,
-                  use_ema=config.use_ema, ema_mu=config.ema_mu, use_cuda=config.use_cuda)
+                  switch_number_increase=config.switch_number_increase, lr=config.lr, lr_decay=config.lr_decay,
+                  beta_0=config.beta0, beta_1=config.beta1, use_ema=config.use_ema, ema_mu=config.ema_mu,
+                  use_cuda=config.use_cuda)
     pggan.train()
