@@ -27,8 +27,8 @@ class PGGAN(object):
         self.use_cuda = use_cuda and torch.cuda.is_available()
         self.R = generator.R
 
-        # self.batchsizes = {2: 128, 3: 128, 4: 128, 5: 64, 6: 64, 7: 32, 8: 8}
-        self.batch_sizes = {2: 16, 3: 16, 4: 16, 5: 16, 6: 16, 7: 16, 8: 8}
+        self.batch_sizes = {2: 128, 3: 128, 4: 128, 5: 64, 6: 64, 7: 32, 8: 8}
+        # self.batch_sizes = {2: 16, 3: 16, 4: 16, 5: 16, 6: 16, 7: 16, 8: 8}
 
         if self.use_cuda:
             self.G.cuda()
