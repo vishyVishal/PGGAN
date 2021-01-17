@@ -80,8 +80,8 @@ class PGGAN(object):
             self.level += 1
             self.current_batch_size = self.batch_sizes.get(self.level)
             self.fade_in_alpha = 0
-            self.alpha_step = 1 / (self.switch_mode_number / self.current_batch_size)
             self.switch_mode_number += self.switch_number_increase
+            self.alpha_step = 1 / (self.switch_mode_number / self.current_batch_size)
             self.update_lr()
         else:
             self.mode = 'stabilize'
