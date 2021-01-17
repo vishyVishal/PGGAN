@@ -117,7 +117,8 @@ class PGGAN(object):
         score = - self.D(generated_images, level=self.level, mode=self.mode, alpha=self.fade_in_alpha).mean()
         score.backward()
         self.G_optim.step()
-        self.update_G_weights_by_ema()
+        if self.use_ema:
+            self.update_G_weights_by_ema()
 
     def train_D(self):
         self.D_optim.zero_grad()
