@@ -1,4 +1,4 @@
-from .model_base import *
+from model.model_base import *
 
 
 class GConvBlock(nn.Module):
@@ -214,16 +214,14 @@ class Discriminator(nn.Module):
         if minibatch_stat_concat:
             last_layers.append(MinibatchStatConcatLayer())
             in_channels += 1
-        Linear = EqualizedLinear if use_weightscale else nn.Linear
+        # Linear = EqualizedLinear if use_weightscale else nn.Linear
         last_layers.extend([
             DConvBlock(in_channels, out_channels, kernel_size=3, padding=1,
                        nonlinearity=nonlinear, use_gdrop=use_gdrop),
             DConvBlock(out_channels, self.get_feature_map_number(0), kernel_size=4, padding=0,
                        nonlinearity=nonlinear, use_gdrop=use_gdrop),
             Flatten(),
-            Linear(self.get_feature_map_number(0), 128),
-            nn.LeakyReLU(negative_slope),
-            Linear(128, 1)
+            nn.Linear(self.get_feature_map_number(0), 1)
         ])
         if sigmoid_at_end:
             last_layers.append(out_active)
