@@ -2,6 +2,7 @@ from torch import optim, autograd
 from torchvision import transforms as T
 import sys
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
@@ -28,7 +29,7 @@ class PGGAN(object):
         self.use_cuda = use_cuda and torch.cuda.is_available()
         self.R = generator.R
 
-        self.batch_sizes = {2: 128, 3: 128, 4: 128, 5: 64, 6: 64, 7: 32, 8: 8}
+        self.batch_sizes = {2: 128, 3: 128, 4: 128, 5: 64, 6: 32, 7: 16, 8: 8}
         # self.batch_sizes = {2: 16, 3: 16, 4: 16, 5: 16, 6: 16, 7: 16, 8: 8}
 
         if self.use_cuda:
@@ -180,7 +181,7 @@ class PGGAN(object):
                 if self.mode == 'transition':
                     self.fade_in_alpha += self.alpha_step
                 self.record_number += self.current_batch_size
-                if self.level >= 4 and self.record_number >= self.compute_swd_every:
+                if self.level >= 4 and (self.record_number >= self.compute_swd_every or self.record_number == 0):
                     self.record_number = 0
                     self.swd.append(self.sample_swd())
                 if self.passed_real_images_num >= self.switch_mode_number:
