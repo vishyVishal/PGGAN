@@ -9,12 +9,13 @@ from model.PGGAN import *
 from data.dataset import CelebA
 from utils import EMA
 from config import config
+from swd.swd import swd
 
 
 class PGGAN(object):
     def __init__(self, generator: Generator, discriminator: Discriminator, dataset: CelebA, n_critic=1,
                  lr=0.001, lr_decay=0, beta_0=0, beta_1=0.99, switch_mode_number=800000, switch_number_increase=0,
-                 use_ema=True, ema_mu=0.999, use_cuda=True):
+                 use_ema=True, ema_mu=0.999, use_cuda=True, compute_swd_every=10000, **kwargs):
         self.G = generator
         self.D = discriminator
         assert generator.R == discriminator.R
@@ -57,7 +58,11 @@ class PGGAN(object):
 
         self.is_finished = 0  # 训练结束标识
 
-        self.log_list = []  # 记录训练过程
+        self.d_loss = []  # 记录训练过程中的D Loss
+        self.swd = []  # 记录训练过程中的SWD(Sliced Wasserstein Distance)
+
+        self.compute_swd_every = compute_swd_every  # 每过多少张图片记录一次swd
+        self.record_number = 0
 
     def update_lr(self):
         if self.lr_decay == 0:
@@ -67,6 +72,20 @@ class PGGAN(object):
             param_group['lr'] = self.lr
         for param_group in self.G_optim.param_groups:
             param_group['lr'] = self.lr
+
+    @torch.no_grad()
+    def sample_swd(self):
+        if self.level <= 3:
+            return
+        d = 0
+        for _ in range(25):
+            noise = torch.randn(4, self.G.latent_dim)
+            if self.use_cuda:
+                noise = noise.cuda()
+            img1 = self.dataset(4, level=self.level)
+            img2 = self.G(noise, level=self.level).cpu()
+            d += swd(img1, img2, device='cuda').item()
+        return d / 25000
 
     def update_state(self):
         self.passed_real_images_num = 0
@@ -131,23 +150,28 @@ class PGGAN(object):
         fake_score = self.D(fake_images, level=self.level, mode=self.mode, alpha=self.fade_in_alpha).mean()
         gradient_penalty = self.compute_gradient_penalty(real_images, fake_images)
         epsilon_penalty = 1e-3 * torch.mean(real_score ** 2)  # 防止正例得分离0过远
-        w_dist = fake_score - real_score  # 模型评价指标
-        loss = w_dist + 10 * gradient_penalty + epsilon_penalty
+        loss = fake_score - real_score + 10 * gradient_penalty + epsilon_penalty
         loss.backward()
         self.D_optim.step()
         self.passed_real_images_num += self.current_batch_size
-        w_dist = w_dist.abs().item()
-        print(f'\rLevel: {self.level} | Mode: {self.mode} | W-Distance: {w_dist} | '
+        print(f'\rLevel: {self.level} | Mode: {self.mode} | D-Loss: {loss.item()} | '
               f'Image Passed: {self.passed_real_images_num}/{self.switch_mode_number}',
               end='', file=sys.stdout, flush=True)
-        self.log_list.append(w_dist)
+        self.d_loss.append(loss.item())
 
     def plot_stat_curve(self):
-        plt.plot(self.log_list)
-        plt.title(f'Level_{self.level}_W_distance')
-        plt.savefig(f'plots/Level_{self.level}.jpg')
+        plt.plot(self.d_loss)
+        plt.title(f'Level_{self.level}_D_Loss')
+        plt.savefig(f'plots/Level_{self.level}_D_Loss.jpg')
         plt.close()
-        self.log_list.clear()
+        self.d_loss.clear()
+        if not self.swd:
+            return
+        plt.plot(self.swd)
+        plt.title(f'Level_{self.level}_SWD')
+        plt.savefig(f'plots/Level_{self.level}_SWD.jpg')
+        plt.close()
+        self.swd.clear()
 
     def train(self):
         while 1:
@@ -155,6 +179,10 @@ class PGGAN(object):
                 self.train_D()
                 if self.mode == 'transition':
                     self.fade_in_alpha += self.alpha_step
+                self.record_number += self.current_batch_size
+                if self.level >= 4 and self.record_number >= self.compute_swd_every:
+                    self.record_number = 0
+                    self.swd.append(self.sample_swd())
                 if self.passed_real_images_num >= self.switch_mode_number:
                     if self.mode == 'stabilize':
                         self.plot_stat_curve()
@@ -166,28 +194,10 @@ class PGGAN(object):
 
 
 if __name__ == '__main__':
-    g = Generator(resolution=config.resolution,
-                  latent_dim=config.latent_dim,
-                  max_feature_map=config.max_feature_map,
-                  normalize_latent=config.normalize_latent,
-                  use_pixelnorm=config.use_pixelnorm,
-                  use_weightscale=config.use_weightscale,
-                  use_leakyrelu=config.use_leaky,
-                  negative_slope=config.negative_slope,
-                  tanh_at_end=config.tanh_at_end)
-    d = Discriminator(resolution=config.resolution,
-                      max_feature_map=config.max_feature_map,
-                      use_leakyrelu=config.use_leaky,
-                      negative_slope=config.negative_slope,
-                      minibatch_stat_concat=config.minibatch_stat_concat,
-                      use_weightscale=config.use_weightscale,
-                      use_gdrop=config.use_gdrop,
-                      sigmoid_at_end=config.sigmoid_at_end)
+    g = Generator(**config.__dict__)
+    d = Discriminator(**config.__dict__)
     dataset = CelebA(data_root=config.data_root,
                      transform=T.Compose([T.ToTensor(), T.Normalize([0.5], [0.5])]),
                      max_resolution=config.resolution)
-    pggan = PGGAN(g, d, dataset, n_critic=config.n_critic, switch_mode_number=config.switch_mode_number,
-                  switch_number_increase=config.switch_number_increase, lr=config.lr, lr_decay=config.lr_decay,
-                  beta_0=config.beta0, beta_1=config.beta1, use_ema=config.use_ema, ema_mu=config.ema_mu,
-                  use_cuda=config.use_cuda)
+    pggan = PGGAN(g, d, dataset, **config.__dict__)
     pggan.train()
