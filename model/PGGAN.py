@@ -53,10 +53,12 @@ class FromOrToRGBLayer(nn.Module):
     """
     A 1×1 convolution layer, which helps to convert between RGB and feature maps
     """
-    def __init__(self, in_channels, out_channels, nonlinearity=None, use_weightscale=True, use_pixelnorm=False):
+
+    def __init__(self, in_channels, out_channels, nonlinearity=None, gain=math.sqrt(2), use_weightscale=True,
+                 use_pixelnorm=False):
         super(FromOrToRGBLayer, self).__init__()
         if use_weightscale:
-            layers = [EqualizedConv2d(in_channels, out_channels, kernel_size=1)]
+            layers = [EqualizedConv2d(in_channels, out_channels, gain=gain, kernel_size=1)]
         else:
             layers = [nn.Conv2d(in_channels, out_channels, kernel_size=1)]
         if nonlinearity is not None:
@@ -82,8 +84,8 @@ class Generator(nn.Module):
                  use_weightscale=True,
                  use_leakyrelu=True,
                  negative_slope=0.2,
-                 tanh_at_end=False  # whether or not to use tanh after each to_rgb layer
-                 ):
+                 tanh_at_end=False,  # whether or not to use tanh after each to_rgb layer
+                 **kwargs):
         super(Generator, self).__init__()
         self.num_channels = num_channels
         self.resolution = resolution
@@ -101,25 +103,36 @@ class Generator(nn.Module):
         out_active = nn.Tanh() if self.tanh_at_end else None
         self.to_rgb_layers = nn.ModuleList()
         self.progress_growing_layers = nn.ModuleList()
-
         first_layer = []
         if normalize_latent:
             first_layer.append(PixelNormLayer())
-        first_layer.extend([
-            ReshapeLayer((latent_dim, 1, 1)),
-            GConvBlock(latent_dim, self.get_feature_map_number(1),
-                       kernel_size=4, padding=3, nonlinearity=nonlinear,
-                       use_weightscale=use_weightscale, use_pixelnorm=use_pixelnorm),
+        if use_weightscale:
+            first_layer.append(EqualizedLinear(latent_dim, self.get_feature_map_number(1) * 4 * 4,
+                                               gain=math.sqrt(2) / 4))
+        else:
+            first_layer.append(nn.Linear(latent_dim, self.get_feature_map_number(1) * 4 * 4))
+        first_layer.append(
+            ReshapeLayer((self.get_feature_map_number(1), 4, 4)),
+            # GConvBlock(latent_dim, self.get_feature_map_number(1),
+            #            kernel_size=4, padding=3, nonlinearity=nonlinear,
+            #            use_weightscale=use_weightscale, use_pixelnorm=use_pixelnorm),
+        )
+        if use_pixelnorm:
+            first_layer.append(PixelNormLayer())
+        first_layer.append(
             GConvBlock(self.get_feature_map_number(1), self.get_feature_map_number(1),
                        kernel_size=3, padding=1, nonlinearity=nonlinear,
                        use_weightscale=use_weightscale, use_pixelnorm=use_pixelnorm)
-        ])
+        )
 
         first_layer = nn.Sequential(*first_layer)
         self.progress_growing_layers.append(first_layer)
-        self.to_rgb_layers.append(FromOrToRGBLayer(self.get_feature_map_number(1), num_channels,
-                                                   nonlinearity=out_active, use_weightscale=use_weightscale,
-                                                   use_pixelnorm=False))
+        self.to_rgb_layers.append(
+            FromOrToRGBLayer(self.get_feature_map_number(1), num_channels,
+                             nonlinearity=out_active, gain=1,
+                             use_weightscale=use_weightscale,
+                             use_pixelnorm=False)
+        )
         self.R = int(math.log2(resolution))
         assert 2 ** self.R == resolution
         for r in range(2, self.R):
@@ -133,8 +146,10 @@ class Generator(nn.Module):
                            nonlinearity=nonlinear, use_weightscale=use_weightscale,
                            use_pixelnorm=use_pixelnorm)
             ))
-            self.to_rgb_layers.append(FromOrToRGBLayer(out_channels, num_channels, nonlinearity=out_active,
-                                                       use_weightscale=use_weightscale, use_pixelnorm=False))
+            self.to_rgb_layers.append(
+                FromOrToRGBLayer(out_channels, num_channels, nonlinearity=out_active, gain=1,
+                                 use_weightscale=use_weightscale, use_pixelnorm=False)
+            )
 
     def get_feature_map_number(self, stage):
         return min(int(self.feature_map_base / (2.0 ** (stage * self.feature_map_decay))), self.max_feature_map)
@@ -176,7 +191,8 @@ class Discriminator(nn.Module):
                  minibatch_stat_concat=True,
                  use_weightscale=True,
                  use_gdrop=False,
-                 sigmoid_at_end=False):
+                 sigmoid_at_end=False,
+                 **kwargs):
         super(Discriminator, self).__init__()
         self.num_channels = num_channels
         self.resolution = resolution
@@ -200,29 +216,34 @@ class Discriminator(nn.Module):
             in_channels, out_channels = self.get_feature_map_number(r), self.get_feature_map_number(r - 1)
             self.from_rgb_layers.append(FromOrToRGBLayer(num_channels, in_channels,
                                                          nonlinearity=nonlinear, use_pixelnorm=False))
-            self.progress_growing_layers.append(nn.Sequential(
-                DConvBlock(in_channels, in_channels, kernel_size=3, padding=1,
-                           nonlinearity=nonlinear, use_gdrop=use_gdrop),
-                DConvBlock(in_channels, out_channels, kernel_size=3, padding=1,
-                           nonlinearity=nonlinear, use_gdrop=use_gdrop),
-                nn.AvgPool2d(kernel_size=2, stride=2, count_include_pad=False)
-            ))
+            self.progress_growing_layers.append(
+                nn.Sequential(
+                    DConvBlock(in_channels, in_channels, kernel_size=3, padding=1,
+                               nonlinearity=nonlinear, use_gdrop=use_gdrop),
+                    DConvBlock(in_channels, out_channels, kernel_size=3, padding=1,
+                               nonlinearity=nonlinear, use_gdrop=use_gdrop),
+                    nn.AvgPool2d(kernel_size=2, stride=2, count_include_pad=False)
+                )
+            )
         last_layers = []
         in_channels, out_channels = self.get_feature_map_number(1), self.get_feature_map_number(1)
-        self.from_rgb_layers.append(FromOrToRGBLayer(num_channels, in_channels,
-                                                     nonlinearity=nonlinear, use_pixelnorm=False))
+        self.from_rgb_layers.append(
+            FromOrToRGBLayer(num_channels, in_channels, nonlinearity=nonlinear, use_pixelnorm=False)
+        )
         if minibatch_stat_concat:
             last_layers.append(MinibatchStatConcatLayer())
             in_channels += 1
-        # Linear = EqualizedLinear if use_weightscale else nn.Linear
         last_layers.extend([
             DConvBlock(in_channels, out_channels, kernel_size=3, padding=1,
                        nonlinearity=nonlinear, use_gdrop=use_gdrop),
             DConvBlock(out_channels, self.get_feature_map_number(0), kernel_size=4, padding=0,
                        nonlinearity=nonlinear, use_gdrop=use_gdrop),
-            Flatten(),
-            nn.Linear(self.get_feature_map_number(0), 1)
+            Flatten()
         ])
+        if use_weightscale:
+            last_layers.append(EqualizedLinear(self.get_feature_map_number(0), 1, gain=1))
+        else:
+            last_layers.append(nn.Linear(self.get_feature_map_number(0), 1))
         if sigmoid_at_end:
             last_layers.append(out_active)
         self.progress_growing_layers.append(nn.Sequential(*last_layers))
