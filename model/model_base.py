@@ -6,13 +6,14 @@ import numpy as np
 
 
 class EqualizedConv2d(nn.Conv2d):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, bias=True):
+    def __init__(self, in_channels, out_channels, kernel_size,
+                 gain=math.sqrt(2), stride=1, padding=0, bias=True):
         super(EqualizedConv2d, self).__init__(in_channels, out_channels, kernel_size, stride, padding, bias=bias)
         self.weight.data.normal_(0.0, 1.0)
         if self.bias is not None:
             self.bias.data.fill_(0)
         fan_in = kernel_size * kernel_size * in_channels
-        self.scale = math.sqrt(2. / fan_in)
+        self.scale = gain * math.sqrt(1. / fan_in)
 
     def forward(self, x):
         return F.conv2d(input=x,
@@ -22,13 +23,13 @@ class EqualizedConv2d(nn.Conv2d):
 
 
 class EqualizedLinear(nn.Linear):
-    def __init__(self, in_features, out_features, bias=True):
+    def __init__(self, in_features, out_features, gain=math.sqrt(2), bias=True):
         super(EqualizedLinear, self).__init__(in_features, out_features, bias)
         self.weight.data.normal_(0.0, 1.0)
         if self.bias is not None:
             self.bias.data.fill_(0)
         fan_in = in_features
-        self.scale = math.sqrt(2. / fan_in)
+        self.scale = gain * math.sqrt(1. / fan_in)
 
     def forward(self, x):
         return F.linear(x, weight=self.weight.mul(self.scale), bias=self.bias)
@@ -101,7 +102,7 @@ class ReshapeLayer(nn.Module):
         self.shape = shape
 
     def forward(self, x):
-        return x.reshape(-1, *self.shape)
+        return x.reshape(x.shape[0], *self.shape)
 
     def extra_repr(self) -> str:
         return f'shape={self.shape}'
