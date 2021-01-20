@@ -7,7 +7,7 @@ import math
 
 
 class CelebA(object):
-    def __init__(self, data_root='data/celeba_faces', transform=None, max_resolution=256):
+    def __init__(self, data_root='data/flickr', transform=None, max_resolution=256):
         self.data_root = data_root
         self.images = []
         self.reload_images()
