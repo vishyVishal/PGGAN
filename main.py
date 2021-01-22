@@ -7,14 +7,14 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from model.PGGAN import *
-from data.dataset import CelebA
+from data.dataset import ImageDataset
 from utils import EMA
 from config import config
 from swd.swd import swd
 
 
 class PGGAN(object):
-    def __init__(self, generator: Generator, discriminator: Discriminator, dataset: CelebA, n_critic=1,
+    def __init__(self, generator: Generator, discriminator: Discriminator, dataset: ImageDataset, n_critic=1,
                  lr=0.001, lr_decay=0, beta_0=0, beta_1=0.99, switch_mode_number=800000, switch_number_increase=0,
                  use_ema=True, ema_mu=0.999, use_cuda=True, compute_swd_every=10000, **kwargs):
         self.G = generator
@@ -197,8 +197,8 @@ class PGGAN(object):
 if __name__ == '__main__':
     g = Generator(**config.__dict__)
     d = Discriminator(**config.__dict__)
-    dataset = CelebA(data_root=config.data_root,
-                     transform=T.Compose([T.ToTensor(), T.Normalize([0.5], [0.5])]),
-                     max_resolution=config.resolution)
+    dataset = ImageDataset(data_root=config.data_root,
+                           transform=T.Compose([T.ToTensor(), T.Normalize([0.5], [0.5])]),
+                           max_resolution=config.resolution)
     pggan = PGGAN(g, d, dataset, **config.__dict__)
     pggan.train()
