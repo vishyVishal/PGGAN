@@ -1,7 +1,7 @@
 import argparse
 
 parser = argparse.ArgumentParser('Args for PGGAN')
-parser.add_argument('--data_root', type=str, default='data/flickr')
+parser.add_argument('--data_root', type=str, default='flickr', choices=['data/flickr', 'data/celeba_faces'])
 parser.add_argument('--resolution', type=int, default=256)      # resolution for image to generate.
 parser.add_argument('--use_ema', type=bool, default=True)       # whether to use EMA to weights of generator.
 parser.add_argument('--ema_mu', type=float, default=0.999)      # smoothing factor for smoothed generator.
@@ -22,10 +22,10 @@ parser.add_argument('--minibatch_stat_concat', type=bool, default=True)  # wheth
 parser.add_argument('--normalize_latent', type=bool, default=True)  # whether to use pixelwise normalization of latent vector.
 
 
-parser.add_argument('--lr', type=float, default=0.001)              # learning rate.
-parser.add_argument('--lr_decay', type=float, default=0.0)         # learning rate decay at every resolution transition, no decay if set to 0.
-parser.add_argument('--beta0', type=float, default=0.0)             # beta0 for adam.
-parser.add_argument('--beta1', type=float, default=0.99)            # beta1 for adam.
+parser.add_argument('--lr', type=float, default=0.001)         # learning rate.
+parser.add_argument('--lr_decay', type=float, default=0.0)     # learning rate decay at every resolution transition, no decay if set to 0.
+parser.add_argument('--beta0', type=float, default=0.0)        # beta0 for adam.
+parser.add_argument('--beta1', type=float, default=0.99)       # beta1 for adam.
 
 
 config, _ = parser.parse_known_args()
